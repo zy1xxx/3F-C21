@@ -1,8 +1,5 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-from pylab import *
 
 def PerspectiveTransfer(img):
     ROTATED_SIZE  = 600 #透视变换后的表盘图像大小
