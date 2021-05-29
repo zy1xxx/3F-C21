@@ -116,14 +116,14 @@ box[3]: [[268 144]]右下
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-from pylab import *
+# import matplotlib.pyplot as plt
+# from PIL import Image
+# from pylab import *
 
 # im = array(Image.open('PT_test1.jpg'))
 # imshow(im)
 # show()
-img1 = cv2.imread('CorImage1.png')
+img1 = cv2.imread('test7.png')
 
 ROTATED_SIZE  = 600 #透视变换后的表盘图像大小
 CUT_SIZE     =  0   #透视变换时四周裁剪长度
