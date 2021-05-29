@@ -1,12 +1,12 @@
 # 3F
 
+整合文件：run.py
+
+需要模块：driver.py
+
 ### 已完成
 
-1. 鱼眼镜头畸变矫正
-
-### TODO
-
-1、目标检测
+1、鱼眼镜头畸变矫正
 
 2、透视变换
 
@@ -14,11 +14,13 @@
 
 4、控制算法
 
-### 报错参考
+### TODO
 
-#### 1、格点数不对应
+1、目标检测
 
-error: (-215:Assertion failed) !objectPoints.empty() && !imagePoints.empty() && objectPoints.total() == imagePoints.total() in function 'cv::fisheye::calibrate'
+2、调试PID
+
+
 
 
 
