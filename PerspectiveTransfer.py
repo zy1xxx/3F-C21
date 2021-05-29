@@ -116,14 +116,14 @@ box[3]: [[268 144]]右下
 
 import cv2
 import numpy as np
-# import matplotlib.pyplot as plt
-# from PIL import Image
-# from pylab import *
+import matplotlib.pyplot as plt
+from PIL import Image
+from pylab import *
 
 # im = array(Image.open('PT_test1.jpg'))
 # imshow(im)
 # show()
-img1 = cv2.imread('test7.png')
+img1 = cv2.imread('./Code/views/07.png')
 
 ROTATED_SIZE  = 600 #透视变换后的表盘图像大小
 CUT_SIZE     =  0   #透视变换时四周裁剪长度
@@ -132,7 +132,8 @@ W_cols, H_rows= img1.shape[:2]
 print(H_rows, W_cols)
 
 # 原图中书本的四个角点(左上、右上、右下、左下),与变换后矩阵位置,排好序的角点输出，0号是左上角，顺时针输出
-pts1 = np.float32([[252, 178], [345, 179], [432, 311], [154, 306]])
+# 选用最佳标定点取得最优效果
+pts1 = np.float32([[260, 180], [420, 180], [580, 400], [100, 400]])#[250, 180], [430, 180], [580, 400], [100, 400]
 #变换后矩阵位置
 pts2 = np.float32([[0, 0],[ROTATED_SIZE,0],[ROTATED_SIZE, ROTATED_SIZE],[0,ROTATED_SIZE],])
 
@@ -141,10 +142,14 @@ pts2 = np.float32([[0, 0],[ROTATED_SIZE,0],[ROTATED_SIZE, ROTATED_SIZE],[0,ROTAT
 M = cv2.getPerspectiveTransform(pts1, pts2)
 dst1 = cv2.warpPerspective(img1, M, (ROTATED_SIZE,ROTATED_SIZE))
 
-# im=array(img)
+# im=array(img1)
 # imshow(im)
 # show()
-cv2.imshow("result",dst1)
+# im1=array(dst1)
+# imshow(im1)
+# show()
+cv2.imwrite("PTCor7.png",dst1)
+# cv2.imshow("result",dst1)
 # show()
 cv2.waitKey(0)
 cv2.destroyAllWindows()
