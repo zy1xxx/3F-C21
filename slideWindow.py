@@ -4,12 +4,12 @@ def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         print(x,y)
 #读取图像
-img = cv2.imread("./ImgTest/PTCor4.png")
+img = cv2.imread("./ImgTest/out.png")
 #将原图转为灰度图
 gray_img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 #Canny边缘检测
 canny_img = cv2.Canny(gray_img,100,150,3)
-
+print(canny_img.shape)
 #slide
 Pheight=img.shape[0]
 Pwidth=img.shape[1]
