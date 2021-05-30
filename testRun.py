@@ -42,7 +42,7 @@ def PerspectiveTransfer(img):
 
     W_cols, H_rows= img.shape[:2]
     # 选用最佳标定点取得最优效果
-    pts1 = np.float32([[260, 180], [420, 180], [580, 400], [100, 400]])#[250, 180], [430, 180], [580, 400], [100, 400]
+    pts1 = np.float32([[240, 220], [380, 220], [550, 400], [70, 400]])#[260, 180], [420, 180], [580, 400], [100, 400]
     # 变换后矩阵位置
     pts2 = np.float32([[0, 0], [ROTATED_SIZE, 0], [ROTATED_SIZE, ROTATED_SIZE], [0, ROTATED_SIZE], ])
     # 生成透视变换矩阵；进行透视变换
@@ -63,7 +63,7 @@ def canny(img):
 def slideWindow(canny_img):
     Pheight = canny_img.shape[0]
     Pwidth = canny_img.shape[1]
-    print(canny_img.shape)
+    #print(canny_img.shape)
     width = 200
     height = 40
     linewidthMin = 20
@@ -71,10 +71,12 @@ def slideWindow(canny_img):
     canny_img2 = canny_img.copy()
     cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
                   (255, 0, 255), 2)
-    cv2.imshow("canny_img", canny_img)
+    cv2.imshow("canny_img", canny_img2)
+    recpointls = []
+    recpointls.append(originPoint)
     for v in range(int(Pheight / height)):
-        print("rec index:", v)
-        print(originPoint)
+        #print("rec index:", v)
+        #print(originPoint)
         position = 0
         positionCnt = 0
         for j in range(3):
@@ -112,25 +114,33 @@ def slideWindow(canny_img):
                 positionCnt += 1
         if positionCnt != 0:
             position = position / positionCnt
-        print("aver:", position)
-        print("<<<<<<")
+        #print("aver:", position)
+        #print("<<<<<<")
         newPoint = (int(originPoint[0] + position - width / 2), originPoint[1] - height)
+        recpointls.append(newPoint)
         cv2.rectangle(canny_img2, (newPoint[0], newPoint[1]), (newPoint[0] + width, newPoint[1] + height),
                       (255, 0, 255), 2)
         originPoint = newPoint
     slopeRateSum = 0
     pointCtn = 5
     startPoint = 1
-    recpointls=[]
+    angle=10
+    
     for i in range(startPoint, pointCtn + startPoint):
-        tmp = (recpointls[i + 1][1] - recpointls[i][1]) / (recpointls[i][0] - recpointls[i + 1][0])
-        print(tmp)
-        slopeRateSum = +tmp
-    slopeRate = slopeRateSum / pointCtn
+        try:
+            tmp = (recpointls[i + 1][1] - recpointls[i][1]) / (recpointls[i][0] - recpointls[i + 1][0])
+            slopeRateSum +=tmp
+        except:
+            pass
+    if pointCtn!=0:
+        slopeRate = slopeRateSum / pointCtn
     # print(slopeRate)
-    angle = math.atan(slopeRate)
-    print("angle",90 - math.degrees(angle))
+        angle = math.atan(slopeRate)
+        print("angle",90 - math.degrees(angle))
+    else:
+        angle=0
     cv2.imshow("canny_img", canny_img2)
+    
     return angle
 def getAngle(frame1):
     img = distortionCorrect(frame1)
@@ -140,15 +150,22 @@ def getAngle(frame1):
     return angle2
 def runCar():
     car=driver()
-    cap1 = cv2.VideoCapture(0)
+    cap1 = cv2.VideoCapture(1)
     _, frame1 = cap1.read()
     angle1=getAngle(frame1)
     angleSum=angle1
     while True:
         _, frame1 = cap1.read()
+        '''
+        img=distortionCorrect(frame1)   
+        rightimg=PerspectiveTransfer(img)
+        canny_img = canny(img)
+        cv2.imshow("canny_img", canny_img)
+        '''
         angle2=getAngle(frame1)
         angleSum+=angle2
         VR,VL=control(angle1,angle2,angleSum)
+        angle1=angle2
         car.set_speed(VR,VL)
         k = cv2.waitKey(1)
         if k == ord('q'):
