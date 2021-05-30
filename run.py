@@ -153,4 +153,7 @@ def runCar():
         k = cv2.waitKey(1)
         if k == ord('q'):
             break
+<<<<<<< HEAD:one.py
 runCar()
+=======
+>>>>>>> b9d3c410eedf2bfddf5a402295a84c412a6d71d5:run.py
