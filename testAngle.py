@@ -5,7 +5,7 @@ import numpy as np
 from driver import *
 import time
 #globe variable for control
-Kp=0.1
+Kp=0.5
 Ki=0
 Kd=0
 wheelBase=15
@@ -43,7 +43,7 @@ def PerspectiveTransfer(img):
 
     W_cols, H_rows= img.shape[:2]
     # 选用最佳标定点取得最优效果
-    pts1 = np.float32([[260, 240], [360, 240], [550, 400], [70, 400]])#[260, 180], [420, 180], [580, 400], [100, 400]
+    pts1 = np.float32([[240, 220], [380, 220], [550, 400], [70, 400]])#[260, 180], [420, 180], [580, 400], [100, 400]
     # 变换后矩阵位置
     pts2 = np.float32([[0, 0], [ROTATED_SIZE, 0], [ROTATED_SIZE, ROTATED_SIZE], [0, ROTATED_SIZE], ])
     # 生成透视变换矩阵；进行透视变换
@@ -54,14 +54,13 @@ def PerspectiveTransfer(img):
 def control(angle1,angle2,sum):
     w=Kp*angle1+Ki*sum+Kd*(angle2-angle1)
     sum+=angle2
-    VR=w*wheelBase/2+V
-    VL=V-w*wheelBase/2
+    VR=w/2+V
+    VL=V-w/2
     print("VR,VL",(VR,VL))
     return VR,VL
 def canny(img):
     #gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)   #要二值化图像，要先进行灰度化处理
-    gray=cv2.GaussianBlur(gray,(5,5),0)
     ret, binary = cv2.threshold(gray,0,255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     canny_img = cv2.Canny(binary, 100, 150, 3)
 
@@ -69,18 +68,21 @@ def canny(img):
 def slideWindow(canny_img):
     global out
     global frameCtn
+    showFlag=True
+
     Pheight = canny_img.shape[0]
     Pwidth = canny_img.shape[1]
     #print(canny_img.shape)
     # width = 200
     width = 100
-    height = 10
+    height = 20
     linewidthMin = 20
     originPoint = (int(Pwidth / 2 - width / 2), Pheight - height)
     canny_img2 = canny_img.copy()
     cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
                   (255, 0, 255), 2)
-    cv2.imshow("canny_img", canny_img2)
+    if showFlag:
+        cv2.imshow("canny_img", canny_img2)
     recpointls = []
     recpointls.append(originPoint)
     for v in range(int(Pheight / height)):
@@ -134,10 +136,13 @@ def slideWindow(canny_img):
     pointCtn = 15
     startPoint = 5
     angle=10
-    
+    for k in range(20):
+        print(recpointls[k])
     for i in range(startPoint, pointCtn + startPoint):
         try:
-            tmp = (recpointls[i + 1][1] - recpointls[i][1]) / (recpointls[i][0] - recpointls[i + 1][0])
+            tmp = float((recpointls[i+1][0] - recpointls[i][0])) / float((recpointls[i][1] - recpointls[i+1][1]))
+        
+            print("tmp",tmp,math.degrees(math.atan(tmp)))
             slopeRateSum +=tmp
         except:
             pass
@@ -145,13 +150,12 @@ def slideWindow(canny_img):
         slopeRate = slopeRateSum / pointCtn
     # print(slopeRate)
         angle = math.atan(slopeRate)
-        angleJ=90 - math.degrees(angle)
-        if angleJ>90:
-            angleJ=angleJ-180
+        angleJ=math.degrees(angle)
         print("angleJ",angleJ)
     else:
         angleJ=0
-    cv2.imshow("canny_img", canny_img2)
+    if showFlag:
+        cv2.imshow("canny_img", canny_img2)
     #out.write(canny_img2)
     frameCtn+=1
     return angleJ
@@ -169,6 +173,7 @@ def runCar():
 
     while True:
         _, frame1 = cap1.read()
+        #cv2.imshow("win",frame1)
         start = time.time()
         angle2=getAngle(frame1)
         end = time.time()
@@ -177,17 +182,18 @@ def runCar():
         angleSum+=angle2
         VR,VL=control(angle1,angle2,angleSum)
         angle1=angle2
-        car.set_speed(VL,VR)
+        #car.set_speed(VR,VL)
         k = cv2.waitKey(1)
         if k == ord('q'):
             break
 #write video
-
 frameCtn=0
 cap1 = cv2.VideoCapture(1)
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('testwrite.avi',fourcc, 2.0, (600,600),False)
-runCar()
-#print("totle farme ctn",frameCtn)
+# fourcc = cv2.VideoWriter_fourcc(*'XVID')
+# out = cv2.VideoWriter('testwrite.avi',fourcc, 2.0, (600,600),False)
+_, frame1 = cap1.read()
+angle1=getAngle(frame1)
+cv2.waitKey()
+print("totle farme ctn",frameCtn)
 cap1.release()
 out.release()
