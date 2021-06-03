@@ -5,7 +5,7 @@ import numpy as np
 from driver import *
 import time
 #globe variable for control
-Kp=0.1
+Kp=0.01
 Ki=0
 Kd=0
 wheelBase=15
@@ -56,14 +56,12 @@ def control(angle1,angle2,sum):
     sum+=angle2
     VR=w*wheelBase/2+V
     VL=V-w*wheelBase/2
-    print("VR,VL",(VR,VL))
     return VR,VL
 def canny(img):
     #gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)   #要二值化图像，要先进行灰度化处理
     ret, binary = cv2.threshold(gray,0,255,cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     canny_img = cv2.Canny(binary, 100, 150, 3)
-
     return canny_img
 def slideWindow(canny_img):
     global out
@@ -71,9 +69,8 @@ def slideWindow(canny_img):
     Pheight = canny_img.shape[0]
     Pwidth = canny_img.shape[1]
     #print(canny_img.shape)
-    # width = 200
-    width = 100
-    height = 10
+    width = 200
+    height = 40
     linewidthMin = 20
     originPoint = (int(Pwidth / 2 - width / 2), Pheight - height)
     canny_img2 = canny_img.copy()
@@ -130,8 +127,8 @@ def slideWindow(canny_img):
                       (255, 0, 255), 2)
         originPoint = newPoint
     slopeRateSum = 0
-    pointCtn = 15
-    startPoint = 5
+    pointCtn = 5
+    startPoint = 1
     angle=10
     
     for i in range(startPoint, pointCtn + startPoint):
@@ -167,16 +164,21 @@ def runCar():
     angleSum=angle1
 
     while True:
-        _, frame1 = cap1.read()
+        _, img = cap1.read()
         start = time.time()
-        angle2=getAngle(frame1)
+        #img = distortionCorrect(frame1)
+        
+        img = PerspectiveTransfer(img)
+        canny_img = canny(img)
+        angle2 = slideWindow(canny_img)
+        #cv2.imshow("canny_img", canny_img)
         end = time.time()
         fps=1/(end-start)
-        #print("fps:",fps)
+        print("fps:",fps)
         angleSum+=angle2
         VR,VL=control(angle1,angle2,angleSum)
         angle1=angle2
-        car.set_speed(VL,VR)
+        car.set_speed(VR,VL)
         k = cv2.waitKey(1)
         if k == ord('q'):
             break

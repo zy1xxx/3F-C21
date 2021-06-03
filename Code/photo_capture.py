@@ -29,7 +29,7 @@ def undistort(img, K=K_C, D=D_C, DIM=DIM_C, scale=0.6, imshow=False):
     return undistorted_img
 
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 base_path=os.path.dirname(os.path.abspath(__file__))
 view_path=os.path.join(base_path,'up_views/')
 if not os.path.exists(view_path):
