@@ -5,11 +5,10 @@ import numpy as np
 from driver import *
 import time
 #globe variable for control
-Kp=0.7#0.55
-Ki=0 #0
-Kd=0
-#wheelBase=15
-V=40
+Kp=0.8 #1
+Ki=0.01 #0
+Kd=1.5 #3 2.5
+V=100   
 
 #globe variable for distortionCorrect
 DIM_C=(640,480)
@@ -57,6 +56,7 @@ def control(angle1,angle2,sum):
     VR=w/2+V
     VL=V-w/2
     print("VR,VL",(VR,VL))
+    print("Sum,Dif",(sum,angle2-angle1))
     return VR,VL
 def canny(img):
     #gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -74,7 +74,7 @@ def slideWindow(canny_img):
     
     Pheight = canny_img.shape[0]#图片宽高
     Pwidth = canny_img.shape[1]
-    width = 200#滑动窗宽高
+    width = 150#滑动窗宽高
     height = 20
     linewidthMin = 20#检测点之间的最小距离
     originPoint = (int(Pwidth / 2 - width / 2), Pheight - height)#初始框原点
@@ -86,48 +86,45 @@ def slideWindow(canny_img):
     for leftRightCtn in range(3):
         position = 0
         positionCnt = 0
-        for j in range(3):#检测的个数
-            cnt = 0
-            poSum = 0
-            line1 = False
-            restart = 0
-            for i in range(width):
-                if line1 == False:#开始检测第一根线
-                    try:
-                        if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:#如果有黑色的像素点
+        cnt = 0
+        poSum = 0
+        line1 = False
+        restart = 0
+        for i in range(width):
+            if line1 == False:#开始检测第一根线
+                try:
+                    if canny_img[originPoint[1]][originPoint[0] + i] == 255:#如果有黑色的像素点
+                        cnt += 1
+                        poSum = poSum + i
+                        restart = i + linewidthMin#下一个开始位置
+                        line1 = True
+                except:
+                    pass
+            else:
+                if i < restart:
+                    continue
+                else:
+                    try:#检测第二根线
+                        if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:
                             cnt += 1
                             poSum = poSum + i
-                            restart = i + linewidthMin#下一个开始位置
-                            line1 = True
+                            break
                     except:
                         pass
-                else:
-                    if i < restart:
-                        continue
-                    else:
-                        try:#检测第二根线
-                            if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:
-                                cnt += 1
-                                poSum = poSum + i
-                                break
-                        except:
-                            pass
-            if cnt != 0:
-                linePo = poSum / cnt
-                position = position + linePo
-                positionCnt += 1
+        if cnt != 0:
+            linePo = poSum / cnt
+            position = position + linePo
+            positionCnt += 1
         if positionCnt==0:#说明线偏移中线
             if leftRightCtn==0:#先往右偏移
                 originPoint=(originPoint[0]+width,originPoint[1])
-                originAngle=30
+                originAngle=0
             elif leftRightCtn==1:
-                originPoint=(originPoint[0]-width,originPoint[1])
-                originAngle=-30
+                originPoint=(originPoint[0]-2*width,originPoint[1])
+                originAngle=0
             else:
                 print("line is too far")
-                # exit(0)
-            cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
-                        (255, 0, 255), 2)#画出滑动窗
+                exit(0)
             # cv2.imshow("canny_img",canny_img)
         else:
             position = position / positionCnt#中线的位置
@@ -137,35 +134,34 @@ def slideWindow(canny_img):
                         (255, 0, 255), 2)#画出滑动窗
             originPoint = newPoint#迭代
             break
-    for v in range(int(Pheight/height)):
+    for v in range(8):
         position = 0
         positionCnt = 0
-        for j in range(3):#检测的个数
-            cnt = 0
-            poSum = 0
-            line1 = False
-            restart = 0
-            for i in range(width):
-                if line1 == False:#开始检测第一根线
-                    try:
-                        if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:#如果有黑色的像素点
+        cnt = 0
+        poSum = 0
+        line1 = False
+        restart = 0
+        for i in range(width):
+            if line1 == False:#开始检测第一根线
+                try:
+                    if canny_img[originPoint[1]][originPoint[0] + i] == 255:#如果有黑色的像素点
+                        cnt += 1
+                        poSum = poSum + i
+                        restart = i + linewidthMin#下一个开始位置
+                        line1 = True
+                except:
+                    pass
+            else:
+                if i < restart:
+                    continue
+                else:
+                    try:#检测第二根线
+                        if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:
                             cnt += 1
                             poSum = poSum + i
-                            restart = i + linewidthMin#下一个开始位置
-                            line1 = True
+                            break
                     except:
                         pass
-                else:
-                    if i < restart:
-                        continue
-                    else:
-                        try:#检测第二根线
-                            if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:
-                                cnt += 1
-                                poSum = poSum + i
-                                break
-                        except:
-                            pass
             if cnt != 0:
                 linePo = poSum / cnt
                 position = position + linePo
@@ -179,6 +175,7 @@ def slideWindow(canny_img):
                       (255, 0, 255), 2)#画出滑动窗
         originPoint = newPoint#迭代
     #下面开始算角度
+    '''
     slopeRateSum = 0
     pointCtn = 6#取的滑动窗数量
     startPoint = 2#开始的位置
@@ -195,20 +192,24 @@ def slideWindow(canny_img):
         print("angleJ",angleJ)
     else:
         angleJ=0
-    # i=3
-    # slopeRate=float((recpointls[i+12][0] - recpointls[i][0])) / float((recpointls[i][1] - recpointls[i+12][1]))#斜率
-    # angle = math.atan(slopeRate)
-    # angleJ=math.degrees(angle)#角度
-    # print("angleJ",angleJ)
+
+    '''
+    i=0
+    len=7
+    slopeRate=float((recpointls[i+len][0] - recpointls[i][0])) / float((recpointls[i][1] - recpointls[i+len][1]))#斜率
+    angle = math.atan(slopeRate)
+    angleJ=math.degrees(angle)#角度
+    print("angleJ",angleJ)
+    
     if showFlag:
         cv2.imshow("canny_img", canny_img2)
     #frameCtn+=1
     return angleJ+originAngle
 def getAngle(img):
-    # img = distortionCorrect(img)
-    #img = PerspectiveTransfer(img)
-    #canny_img = canny(img)
-    angle2= slideWindow(img)
+    #img = distortionCorrect(img)
+    img = PerspectiveTransfer(img)
+    canny_img = canny(img)
+    angle2= slideWindow(canny_img)
     return angle2
 def runCar():
     global canny_img2
@@ -221,12 +222,10 @@ def runCar():
         _, frame1 = cap1.read()
         start = time.time()
         angle2=getAngle(frame1)
-        # angle2=0
-        
         angleSum+=angle2
         VR,VL=control(angle1,angle2,angleSum)
         angle1=angle2
-        #car.set_speed(VL,VR)
+        car.set_speed(VL,VR)
         font = cv2.FONT_HERSHEY_SIMPLEX
         cv2.putText(canny_img2,str(int(VL))+","+str(int(VR)), (100,100), font, 0.7, (255, 255, 255), 1)
         cv2.putText(canny_img2,str(angle2), (100,200), font, 0.7, (255, 255, 255), 1)
