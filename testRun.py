@@ -5,11 +5,11 @@ import numpy as np
 from driver import *
 import time
 #globe variable for control
-Kp=0.5
-Ki=0
+Kp=0.7#0.55
+Ki=0 #0
 Kd=0
-wheelBase=15
-V=30
+#wheelBase=15
+V=40
 
 #globe variable for distortionCorrect
 DIM_C=(640,480)
@@ -69,22 +69,21 @@ def canny(img):
 def slideWindow(canny_img):
     global out
     global frameCtn
+    global canny_img2
     showFlag=True
     
     Pheight = canny_img.shape[0]#图片宽高
     Pwidth = canny_img.shape[1]
-    width = 100#滑动窗宽高
+    width = 200#滑动窗宽高
     height = 20
     linewidthMin = 20#检测点之间的最小距离
     originPoint = (int(Pwidth / 2 - width / 2), Pheight - height)#初始框原点
     canny_img2 = canny_img.copy()#canny_img2为显示的图层
-    cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
-                  (255, 0, 255), 2)
-    if showFlag:
-        cv2.imshow("canny_img", canny_img2)
+
     recpointls = []#滑动窗的列表
-    recpointls.append(originPoint)
-    for v in range(int(Pheight / height)):
+    originAngle=0
+    #确定第一个滑框的位置
+    for leftRightCtn in range(3):
         position = 0
         positionCnt = 0
         for j in range(3):#检测的个数
@@ -117,17 +116,72 @@ def slideWindow(canny_img):
                 linePo = poSum / cnt
                 position = position + linePo
                 positionCnt += 1
+        if positionCnt==0:#说明线偏移中线
+            if leftRightCtn==0:#先往右偏移
+                originPoint=(originPoint[0]+width,originPoint[1])
+                originAngle=30
+            elif leftRightCtn==1:
+                originPoint=(originPoint[0]-width,originPoint[1])
+                originAngle=-30
+            else:
+                print("line is too far")
+                # exit(0)
+            cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
+                        (255, 0, 255), 2)#画出滑动窗
+            # cv2.imshow("canny_img",canny_img)
+        else:
+            position = position / positionCnt#中线的位置
+            newPoint = (int(originPoint[0] + position - width / 2), originPoint[1] - height)#下一个滑动窗的位置
+            recpointls.append(originPoint)
+            cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
+                        (255, 0, 255), 2)#画出滑动窗
+            originPoint = newPoint#迭代
+            break
+    for v in range(int(Pheight/height)):
+        position = 0
+        positionCnt = 0
+        for j in range(3):#检测的个数
+            cnt = 0
+            poSum = 0
+            line1 = False
+            restart = 0
+            for i in range(width):
+                if line1 == False:#开始检测第一根线
+                    try:
+                        if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:#如果有黑色的像素点
+                            cnt += 1
+                            poSum = poSum + i
+                            restart = i + linewidthMin#下一个开始位置
+                            line1 = True
+                    except:
+                        pass
+                else:
+                    if i < restart:
+                        continue
+                    else:
+                        try:#检测第二根线
+                            if canny_img[originPoint[1] + j][originPoint[0] + i] == 255:
+                                cnt += 1
+                                poSum = poSum + i
+                                break
+                        except:
+                            pass
+            if cnt != 0:
+                linePo = poSum / cnt
+                position = position + linePo
+                positionCnt += 1
+      
         if positionCnt != 0:
             position = position / positionCnt#中线的位置
         newPoint = (int(originPoint[0] + position - width / 2), originPoint[1] - height)#下一个滑动窗的位置
-        recpointls.append(newPoint)
-        cv2.rectangle(canny_img2, (newPoint[0], newPoint[1]), (newPoint[0] + width, newPoint[1] + height),
+        recpointls.append(originPoint)
+        cv2.rectangle(canny_img2, (originPoint[0], originPoint[1]), (originPoint[0] + width, originPoint[1] + height),
                       (255, 0, 255), 2)#画出滑动窗
         originPoint = newPoint#迭代
     #下面开始算角度
     slopeRateSum = 0
-    pointCtn = 7#取的滑动窗数量
-    startPoint = 3#开始的位置
+    pointCtn = 6#取的滑动窗数量
+    startPoint = 2#开始的位置
     for i in range(startPoint, pointCtn + startPoint):
         try:
             tmp = float((recpointls[i+1][0] - recpointls[i][0])) / float((recpointls[i][1] - recpointls[i+1][1]))#斜率
@@ -141,18 +195,23 @@ def slideWindow(canny_img):
         print("angleJ",angleJ)
     else:
         angleJ=0
+    # i=3
+    # slopeRate=float((recpointls[i+12][0] - recpointls[i][0])) / float((recpointls[i][1] - recpointls[i+12][1]))#斜率
+    # angle = math.atan(slopeRate)
+    # angleJ=math.degrees(angle)#角度
+    # print("angleJ",angleJ)
     if showFlag:
         cv2.imshow("canny_img", canny_img2)
-    #out.write(canny_img2)
-    frameCtn+=1
-    return angleJ
-def getAngle(frame1):
-    img = distortionCorrect(frame1)
-    img = PerspectiveTransfer(img)
-    canny_img = canny(img)
-    angle2 = slideWindow(canny_img)
+    #frameCtn+=1
+    return angleJ+originAngle
+def getAngle(img):
+    # img = distortionCorrect(img)
+    #img = PerspectiveTransfer(img)
+    #canny_img = canny(img)
+    angle2= slideWindow(img)
     return angle2
 def runCar():
+    global canny_img2
     car=driver()
     _, frame1 = cap1.read()
     angle1=getAngle(frame1)
@@ -160,25 +219,32 @@ def runCar():
 
     while True:
         _, frame1 = cap1.read()
-        #start = time.time()
+        start = time.time()
         angle2=getAngle(frame1)
-        #end = time.time()
-        #fps=1/(end-start)
-        #print("fps:",fps)
+        # angle2=0
+        
         angleSum+=angle2
         VR,VL=control(angle1,angle2,angleSum)
         angle1=angle2
-        car.set_speed(VL,VR)
+        #car.set_speed(VL,VR)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(canny_img2,str(int(VL))+","+str(int(VR)), (100,100), font, 0.7, (255, 255, 255), 1)
+        cv2.putText(canny_img2,str(angle2), (100,200), font, 0.7, (255, 255, 255), 1)
+        out.write(canny_img2)
         k = cv2.waitKey(1)
+        end = time.time()
+        fps=1/(end-start)
+        print("fps:",fps)
         if k == ord('q'):
             break
 
 cap1 = cv2.VideoCapture(1)
-'''write video
+canny_img2=0
+# write video
 frameCtn=0
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('testwrite.avi',fourcc, 2.0, (600,600),False)
-'''
+
 runCar()
 cap1.release()
 out.release()
