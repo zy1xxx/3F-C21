@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import cv2
 import numpy as np
-from driver import  *
 
 # globe variable for control
 Kp = 0.1
@@ -54,13 +53,13 @@ def PerspectiveTransfer(img):
 # Incremental PID
 def control(error_2, error_1, error, VR_1, VL_1):
     # 遇限削弱积分作用
-    # if abs(error) > Integral_threshold:
-    #     error = 0
+    if abs(error) > Integral_threshold:
+        error = 0
     delta_V = Kp * (error - error_1) + Ki * error + Kd * (error + error_2 - 2 * error_1)
-    print ('delta_V is:',delta_V)
-    VR = int(VR_1 - delta_V)
-    VL = int(VL_1 + delta_V)
+    VR = VR_1 - delta_V
+    VL = VL_1 + delta_V
     return VR, VL
+
 
 # 输入的图像要经过透视变换
 def get_error(img):
@@ -129,7 +128,7 @@ def get_error(img):
 
     # 提取预瞄点
     mid = int(Height / 2)
-    _, target = np.where(dilated2[mid :mid + 80, :] > 0)
+    _, target = np.where(dilated2[mid - 40:mid + 40, :] > 0)
     bias = float(target.mean()) - float(Width / 2)
 
     # bias是偏移量，flag=1是检测到了横线，flag=0是没有检测到横线
@@ -142,7 +141,7 @@ def recong_img(img):
     #cv2.imshow('gray',gray)
     #minRadius这个参数是根据
 
-    circle1 = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=30, minRadius=5, maxRadius=30)
+    circle1 = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1, 100, param1=100, param2=30, minRadius=8, maxRadius=30)
     try:
         circles = circle1[0, :, :]  # 提取为二维
         circles = np.uint16(np.around(circles))  # 四舍五入，取整
@@ -151,9 +150,9 @@ def recong_img(img):
             x_r = i[0]
             y_r = i[1]
             radius = i[2]
-            #img_show=img.copy()
-            #cv2.circle(img_show, (i[0], i[1]), i[2], (255, 0, 0), 2)  # 画圆
-            #cv2.imshow('img_show',img_show)
+            img_show=img.copy()
+            cv2.circle(img_show, (i[0], i[1]), i[2], (255, 0, 0), 2)  # 画圆
+            cv2.imshow('img_show',img_show)
             # cv2.circle(img, (i[0], i[1]), 2, (255, 0, 0), 10)  # 画圆心
 
             # 目标区域的图像裁剪出来
@@ -183,7 +182,7 @@ def recong_img(img):
             word_size = 50
             word_mask = cv2.resize(word_mask, dsize=(word_size, word_size), interpolation=cv2.INTER_CUBIC)
             # 利用左和右的连接的差异区分
-            #cv2.imshow('word_mask',word_mask)
+            cv2.imshow('word_mask',word_mask)
 
             left = word_mask[int(word_size / 3):, int(word_size / 2):int(word_size * 2 / 3)]
             right = word_mask[int(word_size / 3):, int(word_size * 2 / 3):int(word_size * 5 / 6)]
@@ -191,7 +190,12 @@ def recong_img(img):
             right1 = np.where(right > 0, 1, 0)
             num1 = int(np.sum(left1))
             num2 = int(np.sum(right1))
-
+            # cv2.namedWindow('left',cv2.WINDOW_NORMAL)
+            # cv2.namedWindow('right',cv2.WINDOW_NORMAL)
+            # cv2.imshow('left',left)
+            # cv2.imshow('right',right)
+            # print(num1)
+            # print(num2)
             if num1 > num2:
                 return 0
                 # return left,right,'left'
@@ -204,54 +208,18 @@ def recong_img(img):
         return -2  #没有检测到
 
 
+
 def runCar():
-    car = driver()
     cap1 = cv2.VideoCapture(1)
-    error_1 = 0
-    error_2 = 0
-    VR_1 = 40
-    VL_1 = 40
-    turn_end = 0
     while (1):
         k = cv2.waitKey(1)
         if k == ord('q'):
             break
         _, frame1 = cap1.read()
-        frame2 = PerspectiveTransfer(frame1)
-        error, flag = get_error(frame2)
-        print ('error is:',error)
-        print ('flag is:',flag)
-        VR, VL = control(error_2, error_1, error, VR_1, VL_1)
-        print ('VR is:',VR)
-        print ('VL is:',VL)
-
-        # 是否检测到横线
-        if flag == 1:
-            # 判断转向
-            turn = recong_img(frame1)
-            print ('turn is: ',turn)
-            if turn == 0:  # 左转
-                car.set_speed(80, 10)
-                turn_end = 1
-            elif turn == 1:
-                car.set_speed(10, 80)
-                turn_end = 1
-            else:
-                car.set_speed(10, 10)
-        else:
-            if turn_end == 1:  # 刚转过弯，误差清零，重新计算
-                turn_end = 0
-                VR = 30
-                VL = 30
-                error_1 = 0
-                error = 0
-
-        car.set_speed(VR, VL)
-        error_2 = error_1
-        error_1 = error
-        VR_1 = VR
-        VL_1 = VL
-
+        #frame1 = undistort(frame1)  # 图像畸变校正
+        #frame1 = PerspectiveTransfer(frame1)
+        turn=recong_img(frame1)
+        print ('turn is:',turn)
 
 if __name__ == '__main__':
     runCar()
