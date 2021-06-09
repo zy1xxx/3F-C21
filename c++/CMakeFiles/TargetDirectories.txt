@@ -1,0 +1,3 @@
+/home/pi/3F-C21/c++/CMakeFiles/rebuild_cache.dir
+/home/pi/3F-C21/c++/CMakeFiles/opencv_test.dir
+/home/pi/3F-C21/c++/CMakeFiles/edit_cache.dir
